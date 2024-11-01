@@ -1,1 +1,3 @@
 /target
+resource/bert_model.pt
+resource/weights

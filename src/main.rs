@@ -156,7 +156,7 @@ async fn main() -> std::io::Result<()> {
             .route("/character_list", web::get().to(character_list))
             .route("/tts", web::get().to(tts))
     })
-    .bind("127.0.0.1:5000")?
+    .bind("127.0.0.1:6006")?
     .run()
     .await
 }

@@ -8,7 +8,7 @@ fn main() {
                     "cargo:rustc-link-search=native={}",
                     lib_path.into_string().unwrap()
                 );
-                // println!("cargo:rustc-link-arg=-Wl,-rpath=/home/itisl/libtorch/lib",);
+                // println!("cargo:rustc-link-arg=-Wl,-rpath=/root/libtorch/lib",);
             }
             println!("cargo:rustc-link-arg=-Wl,--no-as-needed");
             println!("cargo:rustc-link-arg=-Wl,--copy-dt-needed-entries");

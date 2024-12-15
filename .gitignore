@@ -1,4 +1,6 @@
 /target
+resource/bert_model.pt
+resource/weights
 /voices
 resource/bert_model.pt
 resource/g2pw.pt

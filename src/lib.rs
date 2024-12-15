@@ -1,4 +1,4 @@
-use std::{collections::HashMap, sync::Arc, usize};
+use std::{collections::HashMap, sync::{Arc, Mutex}, usize};
 
 use anyhow::Ok;
 use tch::{IValue, Tensor};
@@ -7,6 +7,7 @@ use text::{g2pw::G2PWConverter, CNBertModel};
 pub mod symbols;
 pub mod text;
 pub use tch::Device;
+pub mod voice_manager;
 
 pub struct GPTSovitsConfig {
     pub cn_setting: Option<(String, String, String)>,
@@ -67,12 +68,12 @@ impl GPTSovitsConfig {
 #[derive(Debug)]
 pub struct Speaker {
     name: String,
-    gpt_sovits: tch::CModule,
     ref_text: String,
-    ssl_content: Tensor,
-    ref_audio_32k: Tensor,
-    ref_phone_seq: Tensor,
-    ref_bert_seq: Tensor,
+    ref_audio_32k: Arc<Mutex<Tensor>>,
+    gpt_sovits: Arc<Mutex<tch::CModule>>,
+    ssl_content: Arc<Mutex<Tensor>>,
+    ref_phone_seq: Arc<Mutex<Tensor>>,
+    ref_bert_seq: Arc<Mutex<Tensor>>,
 }
 
 impl Speaker {
@@ -84,21 +85,27 @@ impl Speaker {
         &self.ref_text
     }
 
-    pub fn get_ref_audio_32k(&self) -> &Tensor {
-        &self.ref_audio_32k
+    pub fn get_ref_audio_32k(&self) -> Tensor {
+        self.ref_audio_32k.lock().unwrap().shallow_clone()
     }
 
     pub fn infer(&self, text_phone_seq: &Tensor, bert_seq: &Tensor) -> anyhow::Result<Tensor> {
-        let audio = self.gpt_sovits.forward_ts(&[
-            &self.ssl_content,
-            &self.ref_audio_32k,
-            &self.ref_phone_seq,
-            &text_phone_seq,
-            &self.ref_bert_seq,
-            &bert_seq,
+        let gpt_sovits = self.gpt_sovits.lock().unwrap();
+        let ref_audio_32k = self.ref_audio_32k.lock().unwrap();
+        let ssl_content = self.ssl_content.lock().unwrap();
+        let ref_phone_seq = self.ref_phone_seq.lock().unwrap();
+        let ref_bert_seq = self.ref_bert_seq.lock().unwrap();
+        
+        let output = gpt_sovits.forward_ts(&[
+            &ssl_content.shallow_clone(),
+            &ref_audio_32k.shallow_clone(),
+            &ref_phone_seq.shallow_clone(),
+            &text_phone_seq.shallow_clone(),
+            &ref_bert_seq.shallow_clone(),
+            &bert_seq.shallow_clone(),
         ])?;
-
-        Ok(audio)
+        
+        Ok(output.try_into()?)
     }
 }
 
@@ -145,7 +152,7 @@ impl GPTSovits {
         let mut gpt_sovits = tch::CModule::load_on_device(gpt_sovits_path, self.device)?;
         gpt_sovits.set_eval();
 
-        // 避免句首吞字
+        // Avoid skipping first character
         let ref_text = if !ref_text.ends_with(['。', '.']) {
             ref_text.to_string() + "."
         } else {
@@ -166,12 +173,12 @@ impl GPTSovits {
 
             let speaker = Speaker {
                 name: name.to_string(),
-                gpt_sovits,
+                gpt_sovits: Arc::new(Mutex::new(gpt_sovits)),
                 ref_text,
-                ssl_content,
-                ref_audio_32k,
-                ref_phone_seq,
-                ref_bert_seq,
+                ssl_content: Arc::new(Mutex::new(ssl_content)),
+                ref_audio_32k: Arc::new(Mutex::new(ref_audio_32k)),
+                ref_phone_seq: Arc::new(Mutex::new(ref_phone_seq)),
+                ref_bert_seq: Arc::new(Mutex::new(ref_bert_seq)),
             };
 
             self.speakers.insert(name.to_string(), speaker);

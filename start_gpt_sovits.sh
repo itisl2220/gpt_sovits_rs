@@ -1,15 +1,19 @@
 #!/bin/bash
 
 # 设置环境变量
-export LIBTORCH=/path/to/libtorch
+export LIBTORCH=/root/libtorch
 export LD_LIBRARY_PATH=$LIBTORCH/lib:$LD_LIBRARY_PATH
-export RUST_LOG=info
+# 绕过 PyTorch 版本检查
+export LIBTORCH_BYPASS_VERSION_CHECK=1
 
 # 应用程序路径
-APP_PATH="/path/to/gpt_sovits_rs"
+APP_PATH="/root/gpt_sovits_rs"
 APP_NAME="gpt_sovits_rs"
 LOG_FILE="/var/log/gpt_sovits_rs.log"
 PID_FILE="/var/run/gpt_sovits_rs.pid"
+
+# 获取端口参数，默认为6006
+PORT=${1:-6006}
 
 # 确保日志目录存在
 mkdir -p $(dirname "$LOG_FILE")
@@ -27,8 +31,8 @@ if [ -f "$PID_FILE" ]; then
 fi
 
 # 启动应用
-echo "正在启动 $APP_NAME..."
-cd "$APP_PATH" && nohup ./target/release/$APP_NAME > "$LOG_FILE" 2>&1 &
+echo "正在启动 $APP_NAME 在端口 $PORT..."
+cd "$APP_PATH" && nohup ./target/release/$APP_NAME $PORT > "$LOG_FILE" 2>&1 &
 
 # 保存 PID
 echo $! > "$PID_FILE"

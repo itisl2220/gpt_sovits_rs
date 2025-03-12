@@ -7,6 +7,7 @@ use std::sync::{Arc, Mutex};
 use std::time::Instant;
 use std::{fs, path::Path};
 use tch::Tensor;
+use std::env;
 
 #[derive(Debug, Serialize, Deserialize)]
 struct TTSRequest {
@@ -89,6 +90,14 @@ async fn tts(req: web::Query<TTSRequest>, data: web::Data<AppState>) -> Result<H
 async fn main() -> std::io::Result<()> {
     env_logger::init();
 
+    // 从命令行参数获取端口号，默认为6006
+    let args: Vec<String> = env::args().collect();
+    let port = if args.len() > 1 {
+        args[1].parse::<u16>().unwrap_or(6006)
+    } else {
+        6006
+    };
+
     // Initialize voice manager
     let voice_manager = Arc::new(Mutex::new(VoiceManager::new("voices")));
     if let Err(e) = voice_manager.lock().unwrap().scan_voices() {
@@ -141,7 +150,7 @@ async fn main() -> std::io::Result<()> {
         voice_manager: voice_manager.clone(),
     });
 
-    println!("Starting server at http://127.0.0.1:5000");
+    println!("Starting server at http://127.0.0.1:{}", port);
 
     HttpServer::new(move || {
         let cors = Cors::default()
@@ -156,7 +165,7 @@ async fn main() -> std::io::Result<()> {
             .route("/character_list", web::get().to(character_list))
             .route("/tts", web::get().to(tts))
     })
-    .bind("127.0.0.1:6006")?
+    .bind(format!("127.0.0.1:{}", port))?
     .run()
     .await
 }

@@ -1,5 +1,22 @@
 fn main() {
-    // 不知道为啥，我在使用LIBTORCH_USE_PYTORCH=1时使用cuda会报错必须得手动链接一下动态库，否则他会忽略cuda的动态库(libtorch 我没运行起来，环境太难搞，pytorch暂时也可以用)
+    // 设置环境变量绕过版本检查
+    println!("cargo:rustc-env=LIBTORCH_BYPASS_VERSION_CHECK=1");
+    
+    // 获取 libtorch 路径
+    let libtorch = std::env::var("LIBTORCH").unwrap_or_else(|_| "/root/libtorch".to_string());
+    println!("cargo:rustc-link-search=native={}/lib", libtorch);
+    
+    // 链接 PyTorch 库
+    println!("cargo:rustc-link-lib=dylib=torch");
+    println!("cargo:rustc-link-lib=dylib=torch_cpu");
+    println!("cargo:rustc-link-lib=dylib=c10");
+    
+    // 链接 CUDA 库 (如果使用 CUDA)
+    println!("cargo:rustc-link-lib=dylib=torch_cuda");
+    println!("cargo:rustc-link-lib=dylib=c10_cuda");
+    
+    // 添加 rpath
+    println!("cargo:rustc-link-arg=-Wl,-rpath,{}/lib", libtorch);
     let os = std::env::var("CARGO_CFG_TARGET_OS").expect("Unable to get TARGET_OS");
     match os.as_str() {
         "linux" | "windows" => {
@@ -8,7 +25,6 @@ fn main() {
                     "cargo:rustc-link-search=native={}",
                     lib_path.into_string().unwrap()
                 );
-                // println!("cargo:rustc-link-arg=-Wl,-rpath=/root/libtorch/lib",);
             }
             println!("cargo:rustc-link-arg=-Wl,--no-as-needed");
             println!("cargo:rustc-link-arg=-Wl,--copy-dt-needed-entries");

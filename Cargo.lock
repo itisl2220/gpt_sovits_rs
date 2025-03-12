@@ -2608,9 +2608,9 @@ dependencies = [
 
 [[package]]
 name = "tch"
-version = "0.18.1"
+version = "0.18.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "bb3500c87ef72447c23b33ed6f15fac45a616b09bcac53e62e0e4386bddb3b9d"
+checksum = "f139aa58f0189998a9674f8617b60e054226d98d541e444cd7db5ed986fcc35f"
 dependencies = [
  "half",
  "lazy_static",

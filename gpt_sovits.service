@@ -1,0 +1,15 @@
+[Unit]
+Description=GPT-SoVITS-rs Service
+After=network.target
+
+[Service]
+Type=forking
+User=your_username
+ExecStart=/usr/local/bin/start_gpt_sovits.sh
+ExecStop=/usr/local/bin/stop_gpt_sovits.sh
+PIDFile=/var/run/gpt_sovits_rs.pid
+Restart=on-failure
+RestartSec=5
+
+[Install]
+WantedBy=multi-user.target 

@@ -7,7 +7,7 @@ export LD_LIBRARY_PATH=$LIBTORCH/lib:$LD_LIBRARY_PATH
 export LIBTORCH_BYPASS_VERSION_CHECK=1
 
 # 应用程序路径
-APP_PATH="/root/gpt_sovits_rs"
+APP_PATH="./gpt_sovits_rs"
 APP_NAME="gpt_sovits_rs"
 LOG_FILE="/var/log/gpt_sovits_rs.log"
 PID_FILE="/var/run/gpt_sovits_rs.pid"

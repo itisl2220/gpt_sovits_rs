@@ -1,0 +1,23 @@
+# GPT-SoVITS 配置文件
+
+# 应用程序路径
+app_path = "/root/autodl-tmp/gpt_sovits_rs"
+
+# 日志文件路径
+log_file = "/root/autodl-tmp/gpt_sovits_rs.log"
+
+# 缓存目录
+cache_dir = "/root/autodl-tmp/tmp"
+
+# 自动重启间隔（秒）
+# 3600 = 1小时
+restart_interval = 3600
+
+# 服务端口
+port = 6006
+
+# 日志级别 (trace, debug, info, warn, error)
+log_level = "info"
+
+# LibTorch 路径
+libtorch_path = "/root/libtorch" 

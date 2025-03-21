@@ -1,52 +1,71 @@
 #!/bin/bash
 
+# 配置文件路径
+CONFIG_FILE="/root/autodl-tmp/config.toml"
+
+# 默认配置
+APP_PATH="/root/autodl-tmp/gpt_sovits_rs"
+LOG_FILE="/root/autodl-tmp/gpt_sovits_rs.log"
+CACHE_DIR="/root/autodl-tmp/tmp"
+RESTART_INTERVAL=3600  # 默认1小时重启一次
+PORT=6006
+LOG_LEVEL="info"
+LIBTORCH_PATH="/root/libtorch"
+
+# 如果存在配置文件，则读取配置
+if [ -f "$CONFIG_FILE" ]; then
+    echo "正在加载配置文件: $CONFIG_FILE"
+    
+    # 使用 Python 解析 TOML 文件
+    # 这需要安装 toml 包: pip install toml
+    CONFIG=$(python3 -c "
+import toml
+import json
+import sys
+try:
+    with open('$CONFIG_FILE', 'r') as f:
+        config = toml.load(f)
+        print(json.dumps(config))
+except Exception as e:
+    print('{\"error\": \"' + str(e) + '\"}', file=sys.stderr)
+    exit(1)
+")
+    
+    # 检查是否有错误
+    if [ $? -ne 0 ]; then
+        echo "警告：解析配置文件失败，将使用默认配置"
+    else
+        # 解析 JSON 并设置变量
+        APP_PATH=$(echo $CONFIG | python3 -c "import sys, json; print(json.load(sys.stdin).get('app_path', '$APP_PATH'))")
+        LOG_FILE=$(echo $CONFIG | python3 -c "import sys, json; print(json.load(sys.stdin).get('log_file', '$LOG_FILE'))")
+        CACHE_DIR=$(echo $CONFIG | python3 -c "import sys, json; print(json.load(sys.stdin).get('cache_dir', '$CACHE_DIR'))")
+        RESTART_INTERVAL=$(echo $CONFIG | python3 -c "import sys, json; print(json.load(sys.stdin).get('restart_interval', $RESTART_INTERVAL))")
+        PORT=$(echo $CONFIG | python3 -c "import sys, json; print(json.load(sys.stdin).get('port', $PORT))")
+        LOG_LEVEL=$(echo $CONFIG | python3 -c "import sys, json; print(json.load(sys.stdin).get('log_level', '$LOG_LEVEL'))")
+        LIBTORCH_PATH=$(echo $CONFIG | python3 -c "import sys, json; print(json.load(sys.stdin).get('libtorch_path', '$LIBTORCH_PATH'))")
+    fi
+else
+    echo "警告：找不到配置文件 $CONFIG_FILE，将使用默认配置"
+fi
+
 # 设置环境变量
-export LIBTORCH=/root/libtorch
+export LIBTORCH=$LIBTORCH_PATH
 export LD_LIBRARY_PATH=$LIBTORCH/lib:$LD_LIBRARY_PATH
 # 绕过 PyTorch 版本检查
 export LIBTORCH_BYPASS_VERSION_CHECK=1
+# 设置缓存目录环境变量，供应用程序使用
+export GPT_SOVITS_CACHE_DIR="$CACHE_DIR"
+# 设置日志级别
+export RUST_LOG=$LOG_LEVEL
 
-# 应用程序路径
-APP_PATH="./gpt_sovits_rs"
+# 应用程序名称
 APP_NAME="gpt_sovits_rs"
-# 修改日志文件路径到 ~/autodl-tmp/
-LOG_FILE="$HOME/autodl-tmp/gpt_sovits_rs.log"
-PID_FILE="/var/run/gpt_sovits_rs.pid"
+PID_FILE="/tmp/gpt_sovits_rs.pid"
 
-# 获取端口参数，默认为6006
-PORT=${1:-6006}
-
-# 确保日志目录存在
+# 确保所有必要的目录都存在
 mkdir -p $(dirname "$LOG_FILE")
-
-# 自动重启间隔（秒）
-RESTART_INTERVAL=3600  # 1小时 = 3600秒
-
-# 启动应用的函数
-start_app() {
-    # 检查应用是否已经在运行
-    if [ -f "$PID_FILE" ]; then
-        PID=$(cat "$PID_FILE")
-        if ps -p $PID > /dev/null; then
-            echo "$APP_NAME 已经在运行，PID: $PID"
-            return 1
-        else
-            echo "移除过期的 PID 文件"
-            rm "$PID_FILE"
-        fi
-    fi
-
-    # 启动应用
-    echo "正在启动 $APP_NAME 在端口 $PORT..."
-    cd "$APP_PATH" && nohup ./target/release/$APP_NAME $PORT > "$LOG_FILE" 2>&1 &
-
-    # 保存 PID
-    echo $! > "$PID_FILE"
-    echo "$APP_NAME 已启动，PID: $!"
-    echo "日志文件: $LOG_FILE"
-    
-    return 0
-}
+mkdir -p "$APP_PATH"
+mkdir -p "$CACHE_DIR"
 
 # 停止应用的函数
 stop_app() {
@@ -55,44 +74,67 @@ stop_app() {
         if ps -p $PID > /dev/null; then
             echo "正在停止 $APP_NAME (PID: $PID)..."
             kill $PID
-            
-            # 等待进程终止
+            # 等待进程结束，最多等待10秒
             for i in {1..10}; do
                 if ! ps -p $PID > /dev/null; then
                     break
                 fi
-                echo "等待进程终止..."
                 sleep 1
             done
-            
-            # 如果进程仍在运行，强制终止
+            # 如果进程仍然存在，强制终止
             if ps -p $PID > /dev/null; then
-                echo "强制终止进程..."
+                echo "强制终止 $APP_NAME (PID: $PID)..."
                 kill -9 $PID
             fi
-            
             echo "$APP_NAME 已停止"
         fi
         rm -f "$PID_FILE"
     fi
 }
 
+# 启动应用的函数
+start_app() {
+    # 检查应用程序文件是否存在
+    if [ ! -f "$APP_PATH/target/release/$APP_NAME" ]; then
+        echo "错误：找不到应用程序文件 $APP_PATH/target/release/$APP_NAME"
+        return 1
+    fi
+
+    # 启动应用
+    echo "正在启动 $APP_NAME 在端口 $PORT..."
+    cd "$APP_PATH" && ./target/release/$APP_NAME $PORT > "$LOG_FILE" 2>&1 &
+    
+    # 保存 PID
+    echo $! > "$PID_FILE"
+    echo "$APP_NAME 已启动，PID: $!"
+    echo "日志文件: $LOG_FILE"
+    
+    return 0
+}
+
+# 处理信号
+trap 'stop_app; exit 0' SIGINT SIGTERM
+
 # 首次启动应用
 start_app
+if [ $? -ne 0 ]; then
+    echo "应用启动失败，请检查路径和权限"
+    exit 1
+fi
 
-# 在后台运行定时重启任务
-(
-    while true; do
-        sleep $RESTART_INTERVAL
-        echo "执行定时重启..."
-        stop_app
-        sleep 5  # 等待5秒确保完全停止
-        start_app
-    done
-) &
-
-# 保存后台任务的PID，以便在需要时可以终止
-echo $! > "/var/run/gpt_sovits_rs_restart.pid"
-
-# 在容器中，保持前台进程运行
-tail -f "$LOG_FILE" 
+# 定时重启循环
+echo "设置每 $RESTART_INTERVAL 秒自动重启一次服务"
+while true; do
+    # 等待指定的时间
+    sleep $RESTART_INTERVAL
+    
+    echo "执行定时重启..."
+    stop_app
+    sleep 2  # 等待2秒确保完全停止
+    start_app
+    
+    if [ $? -ne 0 ]; then
+        echo "重启失败，退出循环"
+        exit 1
+    fi
+done 

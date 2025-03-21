@@ -196,7 +196,6 @@ async fn tts(
     // 检查缓存
     let cache_filename = cache.lock().unwrap().get_cache_filename(text, character);
     if let Some(samples) = cache.lock().unwrap().load_from_cache(&cache_filename) {
-        log::info!("从缓存加载音频: {}", cache_filename);
         // 返回缓存的音频
         let header = wav_io::new_header(32000, 16, false, true);
         let wav_data = wav_io::write_to_bytes(&header, &samples)
@@ -209,7 +208,7 @@ async fn tts(
     let mut audios = vec![];
 
     for target_text in text_splitter.chunks(&text) {
-        println!("text: {}", target_text);
+        log::info!("text: {}", target_text);
         if target_text == "。" {
             continue;
         }
@@ -220,7 +219,7 @@ async fn tts(
         audios.push(audio);
     }
 
-    println!("infer time: {} ms", timer.elapsed().as_millis());
+    log::info!("infer time: {} ms", timer.elapsed().as_millis());
 
     let audio = Tensor::cat(&audios, 0);
     let audio_size = audio.size1().unwrap() as usize;
@@ -366,7 +365,7 @@ async fn main() -> std::io::Result<()> {
         voice_manager: voice_manager.clone(),
     });
 
-    println!("Starting server at http://127.0.0.1:{}", port);
+    log::info!("Starting server at http://127.0.0.1:{}", port);
 
     HttpServer::new(move || {
         let cors = Cors::default()

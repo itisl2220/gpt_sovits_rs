@@ -164,7 +164,7 @@ impl CacheManager {
 }
 
 async fn character_list(data: web::Data<AppState>) -> Result<HttpResponse> {
-    let voice_manager = { data.voice_manager.lock().unwrap().clone() };
+    let voice_manager = data.voice_manager.lock().unwrap();
     let voices = voice_manager.list_voices();
     let mut characters: Value = json!({});
 
@@ -181,9 +181,7 @@ async fn tts(
     cache: web::Data<Arc<Mutex<CacheManager>>>,
 ) -> Result<HttpResponse> {
     let text_splitter = text_splitter::TextSplitter::new(50);
-    let voice_manager = {
-        data.voice_manager.lock().unwrap().clone()
-    };
+    let voice_manager = data.voice_manager.lock().unwrap();
     let voices = voice_manager.list_voices();
 
     let character = match &req.character {

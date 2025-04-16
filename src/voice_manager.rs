@@ -2,11 +2,13 @@ use std::collections::HashMap;
 use std::path::{Path, PathBuf};
 use std::fs;
 
+#[derive(Debug, Clone)]
 pub struct VoiceModel {
     pub name: String,
     pub path: PathBuf,
 }
 
+#[derive(Debug, Clone)]
 pub struct VoiceManager {
     voices_dir: PathBuf,
     voices: HashMap<String, VoiceModel>,

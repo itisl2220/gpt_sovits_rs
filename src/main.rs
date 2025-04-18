@@ -6,7 +6,7 @@ use serde::{Deserialize, Serialize};
 use serde_json::{json, Value};
 use sha2::{Digest, Sha256};
 use std::env;
-use std::sync::{Arc, Mutex};
+use std::sync::{Arc, Mutex, RwLock};
 use std::time::Instant;
 use std::{fs, path::Path};
 use tch::Tensor;
@@ -29,7 +29,7 @@ struct TTSRequest {
 }
 struct AppState {
     gpt_sovits: Arc<GPTSovits>,
-    voice_manager: Arc<Mutex<VoiceManager>>,
+    voice_manager: Arc<RwLock<VoiceManager>>,
 }
 
 // 缓存管理结构体
@@ -164,10 +164,19 @@ impl CacheManager {
 }
 
 async fn character_list(data: web::Data<AppState>) -> Result<HttpResponse> {
-    let voice_manager = { data.voice_manager.lock().unwrap().clone() };
-    let voices = voice_manager.list_voices();
+    // 获取 VoiceManager 的共享引用并立即复制声音列表
+    let guard = data.voice_manager.read().map_err(|e| {
+        log::error!("获取 voice_manager 读锁失败: {}", e);
+        actix_web::error::ErrorInternalServerError("无法获取 voice_manager 锁")
+    })?;
+    
+    // 克隆整个列表为 Vec<String>，不再保留对锁的引用
+    let voices: Vec<String> = guard.list_voices().iter().map(|s| s.to_string()).collect();
+    
+    // 丢弃锁
+    drop(guard);
+    
     let mut characters: Value = json!({});
-
     for voice in voices {
         characters[voice] = json!(["default"]);
     }
@@ -181,10 +190,18 @@ async fn tts(
     cache: web::Data<Arc<Mutex<CacheManager>>>,
 ) -> Result<HttpResponse> {
     let text_splitter = text_splitter::TextSplitter::new(50);
-    let voice_manager = {
-        data.voice_manager.lock().unwrap().clone()
-    };
-    let voices = voice_manager.list_voices();
+    
+    // 同样修复 tts 函数中的读锁问题
+    let guard = data.voice_manager.read().map_err(|e| {
+        log::error!("获取 voice_manager 读锁失败: {}", e);
+        actix_web::error::ErrorInternalServerError("无法获取 voice_manager 锁")
+    })?;
+
+    // 克隆整个列表为 Vec<String>
+    let voices: Vec<String> = guard.list_voices().iter().map(|s| s.to_string()).collect();
+
+    // 丢弃锁
+    drop(guard);
 
     let character = match &req.character {
         Some(c) => c.as_str(),
@@ -196,8 +213,26 @@ async fn tts(
     let text = &req.text;
 
     // 检查缓存
-    let cache_filename = cache.lock().unwrap().get_cache_filename(text, character);
-    if let Some(samples) = cache.lock().unwrap().load_from_cache(&cache_filename) {
+    let cache_filename = match cache.lock() {
+        Ok(cache_guard) => cache_guard.get_cache_filename(text, character),
+        Err(e) => {
+            log::error!("获取缓存锁失败: {}", e);
+            return Err(actix_web::error::ErrorInternalServerError("无法获取缓存锁"));
+        }
+    };
+
+    // 尝试从缓存加载
+    let cached_samples = {
+        match cache.lock() {
+            Ok(cache_guard) => cache_guard.load_from_cache(&cache_filename),
+            Err(e) => {
+                log::error!("获取缓存锁失败: {}", e);
+                None
+            }
+        }
+    };
+
+    if let Some(samples) = cached_samples {
         // 返回缓存的音频
         let header = wav_io::new_header(32000, 16, false, true);
         let wav_data = wav_io::write_to_bytes(&header, &samples)
@@ -230,11 +265,12 @@ async fn tts(
         .f_copy_data(&mut samples, audio_size)
         .map_err(|e| actix_web::error::ErrorInternalServerError(e))?;
 
-    // 保存到缓存
-    cache
-        .lock()
-        .unwrap()
-        .save_to_cache(&cache_filename, &samples);
+    // 保存到缓存 - 使用更安全的锁获取方式
+    if let Ok(cache_guard) = cache.lock() {
+        cache_guard.save_to_cache(&cache_filename, &samples);
+    } else {
+        log::warn!("无法获取缓存锁，跳过缓存保存");
+    }
 
     let header = wav_io::new_header(32000, 16, false, true);
     let wav_data = wav_io::write_to_bytes(&header, &samples)
@@ -316,14 +352,14 @@ async fn main() -> std::io::Result<()> {
     };
 
     // Initialize voice manager
-    let voice_manager = Arc::new(Mutex::new(VoiceManager::new("voices")));
-    if let Err(e) = voice_manager.lock().unwrap().scan_voices() {
+    let voice_manager = Arc::new(RwLock::new(VoiceManager::new("voices")));
+    if let Err(e) = voice_manager.write().unwrap().scan_voices() {
         log::error!("Failed to scan voices directory: {}", e);
         return Err(std::io::Error::new(std::io::ErrorKind::Other, e));
     }
     log::info!(
         "Available voices: {:?}",
-        voice_manager.lock().unwrap().list_voices()
+        voice_manager.read().unwrap().list_voices()
     );
 
     // Initialize GPT-SoVITS
@@ -341,7 +377,7 @@ async fn main() -> std::io::Result<()> {
         .map_err(|e| std::io::Error::new(std::io::ErrorKind::Other, e))?;
 
     // Initialize speakers
-    for voice in voice_manager.lock().unwrap().list_voices() {
+    for voice in voice_manager.read().unwrap().list_voices() {
         let voice_ref_wav = format!("voices/{}/ref.wav", voice);
         let voice_ref_text = fs::read_to_string(Path::new(&format!("voices/{}/ref.txt", voice)))
             .map_err(|e| std::io::Error::new(std::io::ErrorKind::Other, e))?;

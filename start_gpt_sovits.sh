@@ -1,7 +1,7 @@
 #!/bin/bash
 
 # 配置文件路径
-CONFIG_FILE="/root/autodl-tmp/config.toml"
+CONFIG_FILE="/root/autodl-tmp/gpt_sovits_rs/config.toml"
 
 # 默认配置
 APP_PATH="/root/autodl-tmp/gpt_sovits_rs"

@@ -69,25 +69,28 @@ mkdir -p "$CACHE_DIR"
 
 # 停止应用的函数
 stop_app() {
-    if [ -f "$PID_FILE" ]; then
-        PID=$(cat "$PID_FILE")
-        if ps -p $PID > /dev/null; then
-            echo "正在停止 $APP_NAME (PID: $PID)..."
-            kill $PID
+    for pid in $(pgrep -f "target/release/$APP_NAME $PORT"); do
+        if [ -n "$pid" ]; then
+            echo "正在停止 $APP_NAME (PID: $pid)..."
+            kill $pid
             # 等待进程结束，最多等待10秒
             for i in {1..10}; do
-                if ! ps -p $PID > /dev/null; then
+                if ! ps -p $pid > /dev/null 2>&1; then
                     break
                 fi
                 sleep 1
             done
             # 如果进程仍然存在，强制终止
-            if ps -p $PID > /dev/null; then
-                echo "强制终止 $APP_NAME (PID: $PID)..."
-                kill -9 $PID
+            if ps -p $pid > /dev/null 2>&1; then
+                echo "强制终止 $APP_NAME (PID: $pid)..."
+                kill -9 $pid
             fi
-            echo "$APP_NAME 已停止"
+            echo "$APP_NAME 已停止 (PID: $pid)"
         fi
+    done
+    
+    # 删除PID文件
+    if [ -f "$PID_FILE" ]; then
         rm -f "$PID_FILE"
     fi
 }
@@ -100,14 +103,25 @@ start_app() {
         return 1
     fi
 
+    # 确保应用没有在运行
+    stop_app
+    
     # 启动应用
     echo "正在启动 $APP_NAME 在端口 $PORT..."
-    cd "$APP_PATH" && ./target/release/$APP_NAME $PORT > "$LOG_FILE" 2>&1 &
+    cd "$APP_PATH" && nohup ./target/release/$APP_NAME $PORT > "$LOG_FILE" 2>&1 &
     
     # 保存 PID
-    echo $! > "$PID_FILE"
-    echo "$APP_NAME 已启动，PID: $!"
+    local pid=$!
+    echo $pid > "$PID_FILE"
+    echo "$APP_NAME 已启动，PID: $pid"
     echo "日志文件: $LOG_FILE"
+    
+    # 等待几秒确认服务已启动
+    sleep 3
+    if ! ps -p $pid > /dev/null 2>&1; then
+        echo "警告: 服务可能未成功启动，请检查日志文件"
+        return 1
+    fi
     
     return 0
 }
@@ -129,12 +143,10 @@ while true; do
     sleep $RESTART_INTERVAL
     
     echo "执行定时重启..."
-    stop_app
-    sleep 2  # 等待2秒确保完全停止
     start_app
     
     if [ $? -ne 0 ]; then
-        echo "重启失败，退出循环"
-        exit 1
+        echo "重启失败，等待60秒后重试"
+        sleep 60
     fi
 done 

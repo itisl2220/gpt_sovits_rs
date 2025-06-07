@@ -1,19 +1,14 @@
-fn main() {
-    // 设置环境变量绕过版本检查
-    println!("cargo:rustc-env=LIBTORCH_BYPASS_VERSION_CHECK=1");
-    
+fn main() {    
     // 获取 libtorch 路径
-    let libtorch = std::env::var("LIBTORCH").unwrap_or_else(|_| "/root/libtorch".to_string());
+    let libtorch = std::env::var("LIBTORCH").unwrap_or_else(|_| "/home/itisl/libtorch".to_string());
     println!("cargo:rustc-link-search=native={}/lib", libtorch);
+
     
-    // 链接 PyTorch 库
-    println!("cargo:rustc-link-lib=dylib=torch");
-    println!("cargo:rustc-link-lib=dylib=torch_cpu");
-    println!("cargo:rustc-link-lib=dylib=c10");
-    
-    // 链接 CUDA 库 (如果使用 CUDA)
-    println!("cargo:rustc-link-lib=dylib=torch_cuda");
-    println!("cargo:rustc-link-lib=dylib=c10_cuda");
+     // 必须按顺序链接这些库
+     println!("cargo:rustc-link-lib=dylib=torch");
+     println!("cargo:rustc-link-lib=dylib=torch_cpu");
+     println!("cargo:rustc-link-lib=dylib=c10");
+     println!("cargo:rustc-link-lib=dylib=torch_cuda");  // 如果使用 CUDA
     
     // 添加 rpath
     println!("cargo:rustc-link-arg=-Wl,-rpath,{}/lib", libtorch);

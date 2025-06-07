@@ -23,6 +23,10 @@ After downloading and extracting the library, you may need to set environment va
 ```bash
 export LIBTORCH=/path/to/libtorch
 export LD_LIBRARY_PATH=$LIBTORCH/lib:$LD_LIBRARY_PATH
+# LIBTORCH_INCLUDE must contain `include` directory.
+export LIBTORCH_INCLUDE=/path/to/libtorch/
+# LIBTORCH_LIB must contain `lib` directory.
+export LIBTORCH_LIB=/path/to/libtorch/
 ```
 Replace /path/to/libtorch with the actual path where you extracted libtorch.
 

@@ -1,12 +1,12 @@
 #!/bin/bash
 
 # 配置文件路径
-CONFIG_FILE="/root/autodl-tmp/gpt_sovits_rs/config.toml"
+CONFIG_FILE="/home/itisl/gpt_sovits_rs/config.toml"
 
 # 默认配置
-APP_PATH="/root/autodl-tmp/gpt_sovits_rs"
-LOG_FILE="/root/autodl-tmp/gpt_sovits_rs.log"
-CACHE_DIR="/root/autodl-tmp/tmp"
+APP_PATH="/home/itisl/gpt_sovits_rs"
+LOG_FILE="/home/itisl/gpt_sovits_rs.log"
+CACHE_DIR="/home/itisl/tmp"
 RESTART_INTERVAL=3600  # 默认1小时重启一次
 PORT=6006
 LOG_LEVEL="info"

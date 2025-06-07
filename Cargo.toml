@@ -16,6 +16,7 @@ anyhow = "1.0.87"
 # ort = "1.16.3"
 tokenizers = { version = "0.20.0", features = ["http"] }
 tch = "=0.18.0"
+torch-sys = "=0.18.0"
 tokio = { version = "*", features=["full"]}
 pinyin = "0.10.0"
 wav_io = "0.1.14"

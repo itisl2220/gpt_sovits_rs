@@ -246,7 +246,7 @@ fn read_config() -> Result<toml::Value, Box<dyn std::error::Error>> {
     let config_path = env::var("CONFIG_FILE").unwrap_or_else(|_| {
         // 尝试多个可能的位置
         let paths = vec![
-            "/root/autodl-tmp/config.toml",
+            "/home/itisl/config.toml",
             "./config.toml",
             "../config.toml",
         ];
@@ -258,7 +258,7 @@ fn read_config() -> Result<toml::Value, Box<dyn std::error::Error>> {
         }
 
         // 如果都不存在，返回默认路径
-        "/root/autodl-tmp/config.toml".to_string()
+        "/home/itisl/config.toml".to_string()
     });
 
     let config_str = fs::read_to_string(config_path)?;
@@ -291,7 +291,7 @@ async fn main() -> std::io::Result<()> {
     let cache_dir = match config.get("cache_dir") {
         Some(toml::Value::String(dir)) => dir.clone(),
         _ => {
-            env::var("GPT_SOVITS_CACHE_DIR").unwrap_or_else(|_| "/root/autodl-tmp/tmp".to_string())
+            env::var("GPT_SOVITS_CACHE_DIR").unwrap_or_else(|_| "/home/itisl/tmp".to_string())
         }
     };
     let cache_manager = Arc::new(Mutex::new(CacheManager::new(&cache_dir)));

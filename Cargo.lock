@@ -1067,6 +1067,7 @@ dependencies = [
  "tokenizers",
  "tokio",
  "toml",
+ "torch-sys",
  "wav_io",
 ]
 
@@ -2945,9 +2946,9 @@ dependencies = [
 
 [[package]]
 name = "torch-sys"
-version = "0.18.1"
+version = "0.18.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "61b87ed41261d4278060c3ba3e735c224687cf312403e4565f2ca75310279d73"
+checksum = "0c787d00c8e04c9d37db6c4f0048f52820906ee7c42de5bae68a844fa8242fea"
 dependencies = [
  "anyhow",
  "cc",

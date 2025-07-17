@@ -96,6 +96,9 @@ impl Speaker {
         let ref_phone_seq = self.ref_phone_seq.lock().unwrap();
         let ref_bert_seq = self.ref_bert_seq.lock().unwrap();
         
+        // Create top_k tensor with value 5
+        let top_k = Tensor::from_slice(&[5i64]).to_device(ssl_content.device());
+        
         let output = gpt_sovits.forward_ts(&[
             &ssl_content.shallow_clone(),
             &ref_audio_32k.shallow_clone(),
@@ -103,6 +106,7 @@ impl Speaker {
             &text_phone_seq.shallow_clone(),
             &ref_bert_seq.shallow_clone(),
             &bert_seq.shallow_clone(),
+            &top_k,
         ])?;
         
         Ok(output.try_into()?)

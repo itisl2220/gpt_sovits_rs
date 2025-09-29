@@ -43,3 +43,6 @@ Thumbs.db
 
 # 缓存目录
 cache/
+
+voices/
+resource/

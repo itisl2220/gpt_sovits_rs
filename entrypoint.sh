@@ -1,7 +1,7 @@
 #!/bin/bash
 
 # 设置环境变量
-export LIBTORCH=/opt/libtorch
+export LIBTORCH=/libtorch
 export LD_LIBRARY_PATH=$LIBTORCH/lib:$LD_LIBRARY_PATH
 export RUST_LOG=info
 
@@ -15,7 +15,7 @@ mkdir -p /app/logs
 
 # 如果命令是 start，则启动应用
 if [ "$1" = "start" ]; then
-    cd "$APP_PATH" && exec ./target/release/$APP_NAME
+    cd "$APP_PATH" && exec ./$APP_NAME
 # 如果命令是 shell，则提供一个 shell
 elif [ "$1" = "shell" ]; then
     exec /bin/bash

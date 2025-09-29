@@ -1,13 +1,13 @@
 # GPT-SoVITS 配置文件
 
 # 应用程序路径
-app_path = "/home/itisl/gpt_sovits_rs"
+app_path = "/app/gpt_sovits_rs"
 
 # 日志文件路径
-log_file = "/home/itisl/gpt_sovits_rs.log"
+log_file = "/app/gpt_sovits_rs.log"
 
 # 缓存目录
-cache_dir = "/home/itisl/tmp"
+cache_dir = "/app/tmp"
 
 # 自动重启间隔（秒）
 # 3600 = 1小时
@@ -20,4 +20,4 @@ port = 6006
 log_level = "info"
 
 # LibTorch 路径
-libtorch_path = "/root/libtorch" 
+libtorch_path = "/libtorch"

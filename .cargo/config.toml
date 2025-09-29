@@ -1,2 +1,11 @@
 [build]
 rustflags = ["-C", "link-args=-Wl,--no-as-needed -ldl -lpthread"] 
+
+[source.crates-io]
+replace-with = 'rsproxy-sparse'
+
+[source.rsproxy-sparse]
+registry = "sparse+https://rsproxy.cn/index/"
+
+[net]
+git-fetch-with-cli = true

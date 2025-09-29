@@ -1,0 +1,1 @@
+podman run -itd --restart=always -p 8080:6006  -e TimeZone='Asia/Shanghai'  -e TZ='Asia/Shanghai'  -v /etc/localtime:/etc/localtime  -v ./voices:/app/voices  --name gpt_sovits_rs  swr.cn-north-4.myhuaweicloud.com/ddn-k8s/docker.io/pytorch/pytorch:2.5.0-cuda12.4-cudnn9-runtime

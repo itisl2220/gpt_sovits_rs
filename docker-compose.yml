@@ -1,0 +1,34 @@
+version: "3.8"
+
+services:
+  gpt-sovits-rs:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: gpt_sovits_rs
+    restart: always
+    ports:
+      - "8080:6006"
+    environment:
+      - TZ=Asia/Shanghai
+      - TimeZone=Asia/Shanghai
+      - RUST_LOG=info
+    volumes:
+      - /etc/localtime:/etc/localtime:ro
+      - ./voices:/app/voices
+      - ./resource:/app/resource
+      - ./logs:/app/logs
+      - ./tmp:/app/tmp
+    networks:
+      - gpt-sovits-network
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: all
+              capabilities: [gpu]
+
+networks:
+  gpt-sovits-network:
+    driver: bridge

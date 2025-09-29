@@ -6,3 +6,4 @@ resource/bert_model.pt
 resource/g2pw.pt
 resource/ssl_model.pt
 resource/tokenizer.json
+libtorch/

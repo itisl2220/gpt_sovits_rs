@@ -70,7 +70,7 @@ COPY entrypoint.sh /app/
 RUN mkdir -p /app/logs /app/voices /app/tmp
 
 # 设置执行权限
-RUN chmod +x /app/entrypoint.sh /app/gpt_sovits_rs
+RUN chmod +x /app/entrypoint.sh /app/target/release/gpt_sovits_rs
 
 # 暴露端口
 EXPOSE 6006

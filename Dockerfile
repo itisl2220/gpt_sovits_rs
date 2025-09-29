@@ -55,7 +55,7 @@ COPY Cargo.lock ./
 # 复制源代码和资源文件
 COPY src/ ./src/
 COPY build.rs ./
-COPY resource/ ./
+COPY resource/ ./resource/
 
 # 构建应用程序
 RUN cargo build --release

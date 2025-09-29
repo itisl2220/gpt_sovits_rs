@@ -1,13 +1,18 @@
 # 多阶段构建 Dockerfile for GPT-SoVITS Rust 应用程序
 
 # 第一阶段：构建阶段
-FROM swr.cn-north-4.myhuaweicloud.com/ddn-k8s/docker.io/pytorch/pytorch:2.5.0-cuda12.4-cudnn9-devel as builder
+FROM swr.cn-north-4.myhuaweicloud.com/ddn-k8s/docker.io/pytorch/pytorch:2.5.0-cuda12.4-cudnn9-devel
+
+# 设置时区
+ENV TZ=Asia/Shanghai
+ENV TimeZone=Asia/Shanghai
 
 # 设置工作目录
-WORKDIR /build
+WORKDIR /app
 
 # 安装 Rust 和必要的系统依赖
 RUN apt-get update && apt-get install -y \
+    ca-certificates \
     curl \
     build-essential \
     pkg-config \
@@ -43,7 +48,6 @@ ENV LIBTORCH=/libtorch
 ENV PATH=/usr/local/cuda-12.4/bin:$PATH
 ENV LD_LIBRARY_PATH=/usr/local/cuda-12.4/lib64:/libtorch/lib:$LD_LIBRARY_PATH
 
-
 # 复制 Cargo 文件
 COPY Cargo.toml ./
 COPY Cargo.lock ./
@@ -56,37 +60,7 @@ COPY resource/ ./resource/
 # 构建应用程序
 RUN cargo build --release
 
-# 第二阶段：运行时阶段
-FROM swr.cn-north-4.myhuaweicloud.com/ddn-k8s/docker.io/pytorch/pytorch:2.5.0-cuda12.4-cudnn9-devel
-
-# 设置时区
-ENV TZ=Asia/Shanghai
-ENV TimeZone=Asia/Shanghai
-
-# 安装必要的运行时依赖
-RUN apt-get update && apt-get install -y \
-    ca-certificates \
-    && rm -rf /var/lib/apt/lists/*
-
-# 设置工作目录
-WORKDIR /app
-
-# 复制 LibTorch 到运行时镜像中
-COPY --from=builder /libtorch/ /libtorch/
-
-# 设置 LibTorch 环境变量
-ENV LIBTORCH=/libtorch
-ENV PATH=/usr/local/cuda-12.4/bin:$PATH
-ENV LD_LIBRARY_PATH=/usr/local/cuda-12.4/lib64:/libtorch/lib:$LD_LIBRARY_PATH
-
-
 ENV RUST_LOG=info
-
-# 从构建阶段复制编译好的二进制文件
-COPY --from=builder /build/target/release/gpt_sovits_rs /app/
-
-# 复制资源文件
-COPY --from=builder /build/resource/ /app/resource/
 
 # 复制配置文件
 COPY config.toml /app/
@@ -101,8 +75,8 @@ RUN chmod +x /app/entrypoint.sh /app/gpt_sovits_rs
 # 暴露端口
 EXPOSE 6006
 
-# 设置入口点
-ENTRYPOINT ["/app/entrypoint.sh"]
+# # 设置入口点
+# ENTRYPOINT ["/app/entrypoint.sh"]
 
 # 默认命令
-CMD ["start"]
+CMD ["/app/target/release/gpt_sovits_rs"]
